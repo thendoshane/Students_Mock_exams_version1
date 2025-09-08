@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Program Design - Exam Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 15px; /* Base font size reduction */
+        }
+        .question-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .question-card:hover {
+            transform: translateY(-3px);
+        }
+        .draggable {
+            cursor: move;
+            user-select: none;
+        }
+        .drop-zone {
+            min-height: 40px;
+            border: 2px dashed #4a5568;
+            transition: background-color 0.2s;
+        }
+        .drag-over {
+            background-color: #2d3748;
+        }
+        .draggable-item {
+            padding: 6px 10px;
+            margin: 4px;
+            background-color: #4a5568;
+            border-radius: 6px;
+            border: 1px solid #718096;
+            font-size: 14px;
+        }
+        .start-screen, .exam-container, #results-screen {
+            display: none;
+        }
+        .active-screen {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex flex-col items-center min-h-screen p-4">
+
+    <!-- Header -->
+    <header class="w-full max-w-6xl mb-4 p-3 bg-gray-800 rounded-lg shadow-md flex justify-between items-center border border-gray-700">
+        <h1 class="text-lg md:text-xl font-bold text-cyan-400">Python Program Design Exam</h1>
+        <div id="timer-container" class="text-base font-semibold bg-gray-700 px-3 py-1 rounded-md">
+            <span id="timer">Time Left: 90:00</span>
+        </div>
+    </header>
+
+    <main class="w-full max-w-6xl">
+        <!-- Start Screen -->
+        <div id="start-screen" class="active-screen text-center p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+            <h2 class="text-2xl font-bold mb-3">Welcome to the Exam Simulator</h2>
+            <p class="mb-2 text-sm">This is a simulated exam for the Higher Certificate in IT.</p>
+            <p class="mb-5 text-gray-400">Total Time: <span class="font-bold text-cyan-400">90 Minutes</span> | Total Marks: <span class="font-bold text-cyan-400">101</span></p>
+            <div class="space-y-1 mb-6 text-left max-w-sm mx-auto text-sm">
+                 <p><strong class="text-cyan-500">Section A:</strong> Multiple Choice (30 Marks)</p>
+                 <p><strong class="text-cyan-500">Section B:</strong> True or False (20 Marks)</p>
+                 <p><strong class="text-cyan-500">Section C:</strong> Matching Column (16 Marks)</p>
+                 <p><strong class="text-cyan-500">Section D:</strong> Drag and Drop (35 Marks)</p>
+            </div>
+            <button id="start-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-md text-base transition duration-300">
+                Start Exam
+            </button>
+        </div>
+
+        <!-- Exam Container -->
+        <div class="exam-container" id="exam-container">
+            <form id="exam-form">
+                <!-- Sections will be injected here by JavaScript -->
+            </form>
+            <div class="mt-6 flex justify-between items-center">
+                <button id="prev-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-md transition duration-300" style="display: none;">Previous</button>
+                <button id="next-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-5 rounded-md transition duration-300">Next</button>
+                <button id="submit-btn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md transition duration-300" style="display: none;">Submit Exam</button>
+
+                <script>
+                    document.getElementById('submit-btn').addEventListener('click', () =>{
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.location.href = 'Answers.html';
+                    })
+                </script>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+             <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold mb-3 text-cyan-400">Exam Results</h2>
+                <p class="text-xl mb-1">Your Final Score: <span id="score" class="font-bold"></span> / <span id="total-marks" class="font-bold"></span></p>
+                <p class="text-xl mb-4">Percentage: <span id="percentage" class="font-bold"></span>%</p>
+                <div id="feedback" class="text-base mb-6"></div>
+                <button id="restart-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-md text-base transition duration-300">
+                    Try Again
+                </button>
+             </div>
+             <!-- Detailed Answer Review -->
+             <div id="results-details" class="mt-6 border-t border-gray-600 pt-4 text-left max-h-[60vh] overflow-y-auto pr-4">
+                <h3 class="text-xl font-bold mb-4 text-center">Answer Review</h3>
+                <!-- Detailed feedback injected here -->
+             </div>
+        </div>
+    </main>
+
+<script>
+const examData = {
+    totalMarks: 101,
+    sections: [
+        {
+            title: "Section A: Multiple Choice",
+            marks: 30,
+            questions: [
+                { q: "What is the output of `print(10 // 3)`?", options: ["3.33", "3.0", "3", "1"], answer: "3", points: 1 },
+                { q: "Which operator is used for exponentiation in Python?", options: ["^", "**", "*", "pow()"], answer: "**", points: 1 },
+                { q: "What will be the value of `result` after this code executes: `x = 5; y = 2; result = x % y`?", options: ["2.5", "2", "1", "0"], answer: "1", points: 1 },
+                { q: "Why is indentation important in Python?", options: ["It makes the code look neat.", "It defines the scope of loops, functions, and classes.", "It is optional.", "It adds comments."], answer: "It defines the scope of loops, functions, and classes.", points: 1 },
+                { q: "How do you start a `for` loop that iterates through a list named `my_list`?", options: ["for i in range(my_list):", "for i <= my_list:", "for i in my_list:", "for each i in my_list:"], answer: "for i in my_list:", points: 1 },
+                { q: "Which keyword is used to stop the current iteration of a loop and continue with the next one?", options: ["break", "stop", "exit", "continue"], answer: "continue", points: 1 },
+                { q: "What is the correct way to define a function in Python?", options: ["function my_func():", "def my_func():", "define my_func():", "create my_func():"], answer: "def my_func():", points: 1 },
+                { q: "What does the `return` keyword do in a function?", options: ["Prints a value to the console.", "Stops the entire program.", "Exits the function and optionally passes a value back.", "Restarts the function."], answer: "Exits the function and optionally passes a value back.", points: 1 },
+                { q: "How would you open a file named `data.txt` in read mode?", options: ["open(\"data.txt\", \"r\")", "open(\"data.txt\", \"w\")", "open.file(\"data.txt\", \"read\")", "read(\"data.txt\")"], answer: "open(\"data.txt\", \"r\")", points: 1 },
+                { q: "What is the purpose of the `with open(...) as f:` syntax?", options: ["It opens the file permanently.", "It opens the file and automatically closes it after the block.", "It is for deleting a file.", "It only works for writing."], answer: "It opens the file and automatically closes it after the block.", points: 1 },
+                { q: "Which file mode is used to append content to an existing file?", options: ["'r+'", "'w'", "'a'", "'x'"], answer: "'a'", points: 1 },
+                { q: "How do you create a one-dimensional list in Python?", options: ["arr = [1, 2, 3]", "arr = (1, 2, 3)", "arr = {1, 2, 3}", "arr = array(1, 2, 3)"], answer: "arr = [1, 2, 3]", points: 1 },
+                { q: "Given `my_list = [10, 20, 30, 40]`, what does `my_list[2]` return?", options: ["20", "30", "40", "Error"], answer: "30", points: 1 },
+                { q: "How do you access the element in the first row and second column of a 2D list `matrix`?", options: ["matrix[1, 2]", "matrix[0][1]", "matrix(0, 1)", "matrix[2][1]"], answer: "matrix[0][1]", points: 1 },
+                { q: "Which search algorithm requires the data to be sorted?", options: ["Linear Search", "Sequential Search", "Binary Search", "All of the above"], answer: "Binary Search", points: 1 },
+                { q: "What is the worst-case time complexity of a linear search?", options: ["O(1)", "O(log n)", "O(n)", "O(n^2)"], answer: "O(n)", points: 1 },
+                { q: "Which sorting algorithm repeatedly compares adjacent elements and swaps them if they are in the wrong order?", options: ["Merge Sort", "Bubble Sort", "Quick Sort", "Insertion Sort"], answer: "Bubble Sort", points: 1 },
+                { q: "A `while` loop is a type of:", options: ["Definitive loop", "Pre-test indefinite loop", "Post-test indefinite loop", "Counted loop"], answer: "Pre-test indefinite loop", points: 1 },
+                { q: "What is the result of `True and False`?", options: ["True", "False", "1", "None"], answer: "False", points: 1 },
+                { q: "A function that calls itself is known as a:", options: ["Nested function", "Lambda function", "Recursive function", "Built-in function"], answer: "Recursive function", points: 1 },
+                { q: "Which method reads a single line from a file, including the newline character?", options: ["read()", "readall()", "readline()", "readlines()"], answer: "readline()", points: 1 },
+                { q: "To use a function from an external module, you must first:", options: ["Copy the code", "import the module", "define the module", "include the module"], answer: "import the module", points: 1 },
+                { q: "In a 2D list `grid = [[1, 2], [3, 4]]`, what is `len(grid)`?", options: ["1", "2", "3", "4"], answer: "2", points: 1 },
+                { q: "A variable defined inside a function is known as a:", options: ["Global variable", "Static variable", "Local variable", "Universal variable"], answer: "Local variable", points: 1 },
+                { q: "What does the `pass` statement do in Python?", options: ["It exits the loop.", "It skips the code.", "It is a null operation; nothing happens.", "It raises an error."], answer: "It is a null operation; nothing happens.", points: 1 },
+                { q: "The `!=` operator means:", options: ["Equals", "Less than", "Not equal to", "Greater than"], answer: "Not equal to", points: 1 },
+                { q: "Which of the following is an immutable data type?", options: ["list", "dictionary", "set", "tuple"], answer: "tuple", points: 1 },
+                { q: "How do you get the number of elements in a list `my_list`?", options: ["my_list.size()", "my_list.length", "len(my_list)", "count(my_list)"], answer: "len(my_list)", points: 1 },
+                { q: "What is the correct syntax for a single-line comment in Python?", options: ["// This is a comment", "/* This is a comment */", "# This is a comment", "<!-- This is a comment -->"], answer: "# This is a comment", points: 1 },
+                { q: "What will `print('Hello' * 3)` output?", options: ["HelloHelloHello", "Hello 3", "Error", "['Hello', 'Hello', 'Hello']"], answer: "HelloHelloHello", points: 1 },
+            ]
+        },
+        {
+            title: "Section B: True or False",
+            marks: 20,
+            questions: [
+                { q: "The `=` operator is used for comparison, while `==` is used for assignment.", answer: false, points: 1 },
+                { q: "Python uses curly braces `{}` to define code blocks.", answer: false, points: 1 },
+                { q: "An `elif` statement can only be used after an `if` statement.", answer: true, points: 1 },
+                { q: "A `while True:` loop will run indefinitely unless a `break` statement is encountered.", answer: true, points: 1 },
+                { q: "A function must always have a `return` statement.", answer: false, points: 1 },
+                { q: "The `'w'` mode in `open()` will create a file if it does not exist.", answer: true, points: 1 },
+                { q: "A list in Python is a mutable data type.", answer: true, points: 1 },
+                { q: "The index of the last element in a list is `len(list)`.", answer: false, points: 1 },
+                { q: "A 2D array in Python is typically implemented as a list of lists.", answer: true, points: 1 },
+                { q: "Binary search is generally faster than linear search on large, sorted datasets.", answer: true, points: 1 },
+                { q: "Bubble Sort is known for its efficiency with large datasets.", answer: false, points: 1 },
+                { q: "The `or` operator returns `True` if at least one of its operands is true.", answer: true, points: 1 },
+                { q: "A whitespace character has no effect on Python's logic outside of string literals.", answer: false, points: 1 },
+                { q: "A function can be called before it is defined in a Python script.", answer: false, points: 1 },
+                { q: "The `readlines()` method returns a list of strings.", answer: true, points: 1 },
+                { q: "Merge sort is a divide-and-conquer algorithm.", answer: true, points: 1 },
+                { q: "`my_list[1:3]` will slice the list to include elements at index 1 and 3.", answer: false, points: 1 },
+                { q: "`5 != 5` evaluates to `True`.", answer: false, points: 1 },
+                { q: "Parameters are values passed to a function, while arguments receive them.", answer: false, points: 1 },
+                { q: "The `pass` statement is a placeholder and does nothing.", answer: true, points: 1 }
+            ]
+        },
+        {
+            title: "Section C: Matching Column",
+            marks: 16,
+            questions: {
+                terms: ["Function Definition", "for Loop", "Local Variable", "File Append Mode", "2D Array", "Linear Search", "Modulo Operator", "Indentation"],
+                definitions: {
+                    "A named block of code that performs a specific task.": "Function Definition",
+                    "Compares two values and returns `True` if they are equal.": "Wrong Answer",
+                    "Iterates over a sequence of elements.": "for Loop",
+                    "A 'list of lists' used to represent a grid.": "2D Array",
+                    "`open('log.txt', 'a')`": "File Append Mode",
+                    "A variable only accessible within its function.": "Local Variable",
+                    "A four-space block that defines scope.": "Indentation",
+                    "`result = 10 % 3`": "Modulo Operator",
+                    "A search that checks each element sequentially.": "Linear Search"
+                },
+                points: 2
+            }
+        },
+        {
+            title: "Section D: Drag and Drop",
+            marks: 35,
+            questions: [
+                {
+                    prompt: "Arrange the blocks to create a function that calculates the area of a rectangle and prints the result.",
+                    blocks: ["print(result)", "area = width * height", "def calculate_area(width, height):", "result = calculate_area(10, 5)", "return area"],
+                    answer: ["def calculate_area(width, height):", "area = width * height", "return area", "result = calculate_area(10, 5)", "print(result)"],
+                    points: 5
+                },
+                {
+                    prompt: "Arrange the blocks to read each line from `students.txt` and print it, handling errors.",
+                    blocks: ["for line in f:", "print('File not found.')", "except FileNotFoundError:", "with open('students.txt', 'r') as f:", "try:", "print(line.strip())"],
+                    answer: ["try:", "with open('students.txt', 'r') as f:", "for line in f:", "print(line.strip())", "except FileNotFoundError:", "print('File not found.')"],
+                    points: 7
+                },
+                 {
+                    prompt: "Arrange the blocks to correctly implement the Bubble Sort algorithm.",
+                    blocks: ["for i in range(n):", "if arr[j] > arr[j+1]:", "def bubble_sort(arr):", "arr[j], arr[j+1] = arr[j+1], arr[j]", "n = len(arr)", "for j in range(0, n-i-1):"],
+                    answer: ["def bubble_sort(arr):", "n = len(arr)", "for i in range(n):", "for j in range(0, n-i-1):", "if arr[j] > arr[j+1]:", "arr[j], arr[j+1] = arr[j+1], arr[j]"],
+                    points: 8
+                },
+                {
+                    prompt: "Arrange the blocks to sum all elements in a 2D array.",
+                    blocks: ["for row in matrix:", "total = 0", "for num in row:", "print(total)", "matrix = [[1, 2], [3, 4]]", "total += num"],
+                    answer: ["matrix = [[1, 2], [3, 4]]", "total = 0", "for row in matrix:", "for num in row:", "total += num", "print(total)"],
+                    points: 7
+                },
+                {
+                    prompt: "Arrange the blocks to create a loop that only accepts an even number from the user.",
+                    blocks: ["num = 1", "while num % 2 != 0:", "print('Thank you!')", "num = int(input('Enter an even number: '))"],
+                    answer: ["num = 1", "while num % 2 != 0:", "num = int(input('Enter an even number: '))", "print('Thank you!')"],
+                    points: 8
+                }
+            ]
+        }
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const startBtn = document.getElementById('start-btn');
+    const startScreen = document.getElementById('start-screen');
+    const examContainer = document.getElementById('exam-container');
+    const resultsScreen = document.getElementById('results-screen');
+    const form = document.getElementById('exam-form');
+    const timerEl = document.getElementById('timer');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const resultsDetails = document.getElementById('results-details');
+
+    let currentSectionIndex = 0;
+    let timerInterval;
+    let timeLeft = 90 * 60;
+
+    startBtn.addEventListener('click', startExam);
+    prevBtn.addEventListener('click', () => changeSection(-1));
+    nextBtn.addEventListener('click', () => changeSection(1));
+    submitBtn.addEventListener('click', submitExam);
+    restartBtn.addEventListener('click', restartExam);
+
+    function startExam() {
+        startScreen.classList.remove('active-screen');
+        examContainer.classList.add('active-screen');
+        renderSection(currentSectionIndex);
+        startTimer();
+    }
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerEl.textContent = `Time Left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                submitExam();
+            }
+        }, 1000);
+    }
+    
+    function renderSection(index) {
+        const section = examData.sections[index];
+        form.innerHTML = '';
+        const sectionDiv = document.createElement('div');
+        sectionDiv.id = `section-${index}`;
+        sectionDiv.className = 'p-5 bg-gray-800 rounded-xl shadow-lg border border-gray-700';
+        let content = `<h2 class="text-xl font-bold mb-4 border-b border-gray-600 pb-2 text-cyan-400">${section.title} (${section.marks} Marks)</h2>`;
+        
+        switch(section.title.split(':')[0]) {
+            case 'Section A':
+                content += renderMultipleChoice(section.questions, index);
+                break;
+            case 'Section B':
+                content += renderTrueFalse(section.questions, index);
+                break;
+            case 'Section C':
+                content += renderMatching(section.questions, index);
+                break;
+            case 'Section D':
+                content += renderDragDrop(section.questions, index);
+                break;
+        }
+        sectionDiv.innerHTML = content;
+        form.appendChild(sectionDiv);
+        if (section.title.split(':')[0] === 'Section D') setupDragDrop();
+        updateNavButtons();
+    }
+    
+    function renderMultipleChoice(questions, sectionIdx) {
+        return questions.map((q, i) => `
+            <div class="mb-4 question-card bg-gray-900/50 p-3 rounded-md">
+                <p class="font-semibold mb-2">${i + 1}. ${q.q.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                ${q.options.map(opt => `
+                    <label class="block text-sm mb-1 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
+                        <input type="radio" name="s${sectionIdx}q${i}" value="${opt.replace(/"/g, '&quot;')}" class="mr-2 accent-cyan-500">
+                        <span>${opt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                    </label>
+                `).join('')}
+            </div>
+        `).join('');
+    }
+
+    function renderTrueFalse(questions, sectionIdx) {
+        return questions.map((q, i) => `
+            <div class="mb-4 question-card bg-gray-900/50 p-3 rounded-md">
+                <p class="font-semibold mb-2">${i + 1}. ${q.q.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                <label class="inline-block mr-4 p-2 rounded-md hover:bg-gray-700 cursor-pointer text-sm">
+                    <input type="radio" name="s${sectionIdx}q${i}" value="true" class="mr-2 accent-cyan-500"> True
+                </label>
+                <label class="inline-block p-2 rounded-md hover:bg-gray-700 cursor-pointer text-sm">
+                    <input type="radio" name="s${sectionIdx}q${i}" value="false" class="mr-2 accent-cyan-500"> False
+                </label>
+            </div>
+        `).join('');
+    }
+
+    function renderMatching(questionData, sectionIdx) {
+        const terms = questionData.terms;
+        const definitions = Object.keys(questionData.definitions);
+        const shuffledDefinitions = [...definitions].sort(() => Math.random() - 0.5);
+        return terms.map((term, i) => `
+            <div class="mb-3 question-card bg-gray-900/50 p-3 rounded-md flex items-center justify-between gap-4">
+                <p class="font-semibold w-2/5 text-sm">${i + 1}. ${term}</p>
+                <select name="s${sectionIdx}q${i}" class="w-3/5 p-2 bg-gray-700 border border-gray-600 rounded-md text-gray-200 text-sm">
+                    <option value="">Select a definition...</option>
+                    ${shuffledDefinitions.map(def => `<option value="${def.replace(/"/g, '&quot;')}">${def.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`).join('')}
+                </select>
+            </div>
+        `).join('');
+    }
+
+    function renderDragDrop(questions, sectionIdx) {
+        return questions.map((q, i) => `
+            <div class="mb-6 question-card bg-gray-900/50 p-3 rounded-md">
+                <p class="font-semibold mb-3">${i + 1}. ${q.prompt}</p>
+                <div class="mb-3 flex flex-wrap gap-2 p-2 bg-gray-700 rounded-md" id="source-s${sectionIdx}q${i}">
+                    ${[...q.blocks].sort(() => Math.random() - 0.5).map((block, blockIdx) => `
+                        <div id="s${sectionIdx}q${i}b${blockIdx}" class="draggable-item draggable" draggable="true">${block.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                    `).join('')}
+                </div>
+                <div id="drop-zone-s${sectionIdx}q${i}" class="drop-zone p-2 rounded-md flex flex-col items-start"></div>
+            </div>
+        `).join('');
+    }
+
+    function setupDragDrop() {
+        const draggables = document.querySelectorAll('.draggable');
+        const containers = document.querySelectorAll('.drop-zone, [id^="source-"]');
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', e.target.id);
+                setTimeout(() => e.target.classList.add('opacity-50'), 0);
+            });
+            draggable.addEventListener('dragend', e => e.target.classList.remove('opacity-50'));
+        });
+        containers.forEach(container => {
+            container.addEventListener('dragover', e => { e.preventDefault(); container.classList.add('drag-over'); });
+            container.addEventListener('dragleave', () => container.classList.remove('drag-over'));
+            container.addEventListener('drop', e => {
+                e.preventDefault();
+                container.classList.remove('drag-over');
+                const id = e.dataTransfer.getData('text');
+                const draggableElement = document.getElementById(id);
+                if (draggableElement) container.appendChild(draggableElement);
+            });
+        });
+    }
+
+    function updateNavButtons() {
+        prevBtn.style.display = currentSectionIndex > 0 ? 'inline-block' : 'none';
+        nextBtn.style.display = currentSectionIndex < examData.sections.length - 1 ? 'inline-block' : 'none';
+        submitBtn.style.display = currentSectionIndex === examData.sections.length - 1 ? 'inline-block' : 'none';
+    }
+
+    function changeSection(direction) {
+        currentSectionIndex += direction;
+        renderSection(currentSectionIndex);
+    }
+    
+    function calculateScore() {
+        let calculatedScore = 0;
+        const formData = new FormData(form);
+
+        examData.sections.forEach((section, sIdx) => {
+            // Section A: Multiple Choice
+            if (section.title.startsWith('Section A')) {
+                section.questions.forEach((q, qIdx) => {
+                    const userAnswer = formData.get(`s${sIdx}q${qIdx}`);
+                    if (userAnswer !== null && userAnswer === q.answer) {
+                        calculatedScore += q.points;
+                    }
+                });
+            }
+            // Section B: True or False
+            else if (section.title.startsWith('Section B')) {
+                section.questions.forEach((q, qIdx) => {
+                    const userAnswer = formData.get(`s${sIdx}q${qIdx}`);
+                    if (userAnswer !== null) { // CRITICAL: Only score if an answer was given
+                        const userAnswerAsBoolean = (userAnswer === 'true');
+                        if (userAnswerAsBoolean === q.answer) {
+                            calculatedScore += q.points;
+                        }
+                    }
+                });
+            }
+            // Section C: Matching
+            else if (section.title.startsWith('Section C')) {
+                section.questions.terms.forEach((term, qIdx) => {
+                    const userAnswer = formData.get(`s${sIdx}q${qIdx}`);
+                    if (userAnswer && section.questions.definitions[userAnswer] === term) {
+                        calculatedScore += section.questions.points;
+                    }
+                });
+            }
+            // Section D: Drag and Drop
+            else if (section.title.startsWith('Section D')) {
+                section.questions.forEach((q, qIdx) => {
+                    const dropZoneId = `drop-zone-s${sIdx}q${qIdx}`;
+                    const dropZone = document.getElementById(dropZoneId);
+                    if (dropZone) {
+                        const droppedItems = Array.from(dropZone.children).map(child => child.textContent);
+                        if (JSON.stringify(droppedItems) === JSON.stringify(q.answer)) {
+                            calculatedScore += q.points;
+                        }
+                    }
+                });
+            }
+        });
+        return calculatedScore;
+    }
+
+    function generateResultsDetails() {
+        const formData = new FormData(form);
+        let detailsHtml = '';
+        const correctIcon = `<svg class="w-5 h-5 inline mr-1 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+        const incorrectIcon = `<svg class="w-5 h-5 inline mr-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+
+        examData.sections.forEach((section, sIdx) => {
+            detailsHtml += `<h4 class="text-lg font-bold mt-5 mb-2 border-t border-gray-600 pt-3 text-cyan-400">${section.title}</h4>`;
+            
+            if (section.title.startsWith('Section A') || section.title.startsWith('Section B')) {
+                section.questions.forEach((q, qIdx) => {
+                    const userAnswer = formData.get(`s${sIdx}q${qIdx}`);
+                    let isCorrect = false;
+                    if(section.title.startsWith('Section A')) {
+                        isCorrect = userAnswer === q.answer;
+                    } else { // Section B
+                        if (userAnswer !== null) {
+                            isCorrect = (userAnswer === 'true') === q.answer;
+                        }
+                    }
+                    
+                    detailsHtml += `<div class="p-2 mb-2 rounded-md ${isCorrect ? 'bg-green-900/30' : 'bg-red-900/30'}">
+                        <p class="font-semibold text-sm">${isCorrect ? correctIcon : incorrectIcon} ${qIdx + 1}. ${q.q.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                        <p class="text-xs pl-6">Your answer: <span class="font-medium ${isCorrect ? 'text-green-300' : 'text-red-300'}">${userAnswer || "Not answered"}</span></p>
+                        ${!isCorrect ? `<p class="text-xs pl-6">Correct answer: <span class="font-medium text-green-300">${q.answer}</span></p>` : ''}</div>`;
+                });
+            } else if (section.title.startsWith('Section C')) {
+                section.questions.terms.forEach((term, qIdx) => {
+                    const userAnswerDef = formData.get(`s${sIdx}q${qIdx}`);
+                    const isCorrect = userAnswerDef && section.questions.definitions[userAnswerDef] === term;
+                    const correctDef = Object.keys(section.questions.definitions).find(key => section.questions.definitions[key] === term);
+                    detailsHtml += `<div class="p-2 mb-2 rounded-md ${isCorrect ? 'bg-green-900/30' : 'bg-red-900/30'}">
+                        <p class="font-semibold text-sm">${isCorrect ? correctIcon : incorrectIcon} ${qIdx + 1}. Term: "${term}"</p>
+                        <p class="text-xs pl-6">Your match: <span class="font-medium ${isCorrect ? 'text-green-300' : 'text-red-300'}">${userAnswerDef || "Not answered"}</span></p>
+                        ${!isCorrect ? `<p class="text-xs pl-6">Correct match: <span class="font-medium text-green-300">${(correctDef || "").replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></p>` : ''}</div>`;
+                });
+            } else if (section.title.startsWith('Section D')) {
+                section.questions.forEach((q, qIdx) => {
+                    const dropZone = document.getElementById(`drop-zone-s${sIdx}q${qIdx}`);
+                    const droppedItems = dropZone ? Array.from(dropZone.children).map(child => child.textContent) : [];
+                    const isCorrect = JSON.stringify(droppedItems) === JSON.stringify(q.answer);
+                    detailsHtml += `<div class="p-2 mb-2 rounded-md ${isCorrect ? 'bg-green-900/30' : 'bg-red-900/30'}">
+                        <p class="font-semibold text-sm">${isCorrect ? correctIcon : incorrectIcon} ${qIdx + 1}. ${q.prompt}</p>
+                        <div class="text-xs pl-6 mt-1">Your order: <div class="p-1 mt-1 rounded bg-gray-800/70 font-mono text-xs">${droppedItems.length > 0 ? droppedItems.map(item => `<div>${item.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`).join('') : "Not answered"}</div></div>
+                        ${!isCorrect ? `<div class="text-xs pl-6 mt-1">Correct order: <div class="p-1 mt-1 rounded bg-gray-800/70 font-mono text-xs text-green-300">${q.answer.map(item => `<div>${item.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`).join('')}</div></div>` : ''}</div>`;
+                });
+            }
+        });
+        resultsDetails.innerHTML = detailsHtml;
+    }
+
+    function submitExam() {
+        clearInterval(timerInterval);
+        const finalScore = calculateScore();
+        examContainer.classList.remove('active-screen');
+        resultsScreen.classList.add('active-screen');
+        const percentage = examData.totalMarks > 0 ? ((finalScore / examData.totalMarks) * 100).toFixed(2) : 0;
+        
+        document.getElementById('score').textContent = finalScore;
+        document.getElementById('total-marks').textContent = examData.totalMarks;
+        document.getElementById('percentage').textContent = percentage;
+        
+        let feedbackText = '';
+        if (percentage >= 80) feedbackText = 'Excellent work! You have a strong grasp of the material.';
+        else if (percentage >= 60) feedbackText = 'Good job! There are a few areas you could review.';
+        else if (percentage >= 50) feedbackText = 'You passed, but there is significant room for improvement.';
+        else feedbackText = 'It looks like you need to review the topics more thoroughly. Keep practicing!';
+        document.getElementById('feedback').textContent = feedbackText;
+        generateResultsDetails();
+    }
+
+    function restartExam() {
+        currentSectionIndex = 0;
+        timeLeft = 90 * 60;
+        resultsScreen.classList.remove('active-screen');
+        startScreen.classList.add('active-screen');
+        timerEl.textContent = 'Time Left: 90:00';
+    }
+});
+</script>
+
+</body>
+</html>
+
